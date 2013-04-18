@@ -1,0 +1,74 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use Data::Dumper;
+
+use LWP::UserAgent;
+
+
+
+open DEBUG, '>>', '/tmp/eventcmd.log';
+
+sub debug { print DEBUG shift . "\n"; }
+sub osascript { system 'osascript', map { ('-e', $_) } split(/\n/, $_[0]); }
+
+my $local_cover_art = '';
+my %song_attrs;
+if ( $ARGV[0] eq 'songstart') {
+  while ( <STDIN> ) {
+    chomp;
+    next if $_ =~ m/^station/;
+    next if $_ =~ m/^$/;
+
+    my ($key, $val) = m/^([[:alnum:]]+)=(.*)$/;
+    $song_attrs{$key} = $val;
+
+    if ( $key eq 'coverArt' && length($val) > 0 ) {
+      ( $local_cover_art = $val ) =~ s|^.*/([[:alnum:]_]+\.jpg)$|$1|;
+      my $ua  = LWP::UserAgent->new;
+      my $req = HTTP::Request->new(GET => $val);
+      my $res = $ua->request($req);
+      if ($res->is_success) {
+	open(COVER_ART, '>', "/tmp/$local_cover_art");
+	print COVER_ART $res->content;
+	close COVER_ART;
+      }
+    }
+
+    debug("$_");
+  }
+
+  my $appname  = 'pandora';
+  my $title    = 'Now Playing';
+  my $message  = "'$song_attrs{title}' by '$song_attrs{artist}' on '$song_attrs{album}'";
+  my $image    = "/tmp/$local_cover_art";
+  my $sticky   = 0;
+  my $priority = 0;
+
+  my $uname    = `uname` ;
+  chomp($uname);
+  if ( $uname eq 'Linux') {
+    eval 'use Net::DBus;';
+    eval 'use Net::DBus::Dumper;';
+
+    my $bus     = Net::DBus->session;
+    my $service = $bus->get_service("org.freedesktop.Notifications");
+    my $object  = $service->get_object("/org/freedesktop/Notifications", "org.freedesktop.Notifications");
+    $object->Notify($appname, $$, $image, $title, $message, [], {}, -1);
+  } elsif ( $uname eq 'Darwin' ) {
+    osascript <<END
+
+END
+  } else {
+    print "I don't know how to run on your OS, sorry\n";
+    exit 1;
+  }
+
+  debug Dumper(\%song_attrs);
+} else {
+  debug(Dumper(\%song_attrs));
+  debug(Dumper(\@ARGV));
+}
+
+close DEBUG;
