@@ -57,7 +57,31 @@ if ( $ARGV[0] eq 'songstart') {
     my $object  = $service->get_object("/org/freedesktop/Notifications", "org.freedesktop.Notifications");
     $object->Notify($appname, $$, $image, $title, $message, [], {}, -1);
   } elsif ( $uname eq 'Darwin' ) {
-    osascript <<END
+    osascript <<END;
+
+tell application "System Events"
+	 set isRunning to (count of (every process whose bundle identifier is "com.Growl.GrowlHelperApp")) > 0
+	 do shell script "echo Growl is not running"
+end tell
+
+if isRunning then
+	tell application id "com.Growl.GrowlHelperApp"
+			set the allNotificationsList to ¬
+			{"PianoBar", "PianoBar"}		
+		register as application ¬
+			"PianoBar Notification" all notifications allNotificationsList ¬
+			default notifications enabledNotificationsList ¬
+			icon of application "Growl"
+		--       Send a Notification…
+		notify with name ¬
+			"PianoBar" title ¬
+			"$title" description ¬
+			"$message" application name "PianoBar"
+			image from location ¬
+			"file:///tmp/$local_cover_art"	
+	end tell
+end if
+
 
 END
   } else {
