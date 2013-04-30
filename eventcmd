@@ -60,28 +60,38 @@ if ( $ARGV[0] eq 'songstart') {
     osascript <<END;
 
 tell application "System Events"
-	 set isRunning to (count of (every process whose bundle identifier is "com.Growl.GrowlHelperApp")) > 0
-	 do shell script "echo Growl is not running"
+	set isRunning to (count of (every process whose bundle identifier is "com.Growl.GrowlHelperApp")) > 0
+	do shell script "echo Growl Is Not Running!"
 end tell
+
 
 if isRunning then
 	tell application id "com.Growl.GrowlHelperApp"
-			set the allNotificationsList to ¬
-			{"PianoBar", "PianoBar"}		
+		set the allNotificationsList to ¬
+			{"PianoBar", "PianoBar"}
+		set the enabledNotificationsList to ¬
+			{"PianoBar", "PianoBar"}
+		
+		tell application "System Events"
+			set imgfile to file "/tmp/$local_cover_art"
+		end tell
+		set imgfd to open for access imgfile
+		set img to read imgfd as "TIFF"
+		close access imgfd
+		
 		register as application ¬
-			"PianoBar Notification" all notifications allNotificationsList ¬
+			"PianoBar" all notifications allNotificationsList ¬
 			default notifications enabledNotificationsList ¬
-			icon of application "Growl"
+			--	icon of application "/tmp/$local_cover_art"
 		--       Send a Notification…
 		notify with name ¬
 			"PianoBar" title ¬
 			"$title" description ¬
-			"$message" application name "PianoBar"
-			image from location ¬
-			"file:///tmp/$local_cover_art"	
+			"$message" application name ¬
+			"PianoBar" image img
+		
 	end tell
 end if
-
 
 END
   } else {
